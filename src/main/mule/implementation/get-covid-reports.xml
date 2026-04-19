@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+	<flow name="get:\reports:covid-uhub-sapi-config">
+		<set-variable value='#[attributes.header."x-transaction-id" default uuid()]' doc:name="Set Transaction ID" doc:id="d3d1ad67-0f2d-4f25-96b0-c248144bc907" variableName="transactionId"/>
+		<logger level="INFO" doc:name="Start Log" doc:id="6de3aee7-c209-4d13-9a6e-f92d444757d3" message="transactionID: #[vars.transactionId], CoreelationID: #[vars.correlationId], message: started get covid reports flow"/>
+		<ee:transform doc:name="Prepare Dynamic Query" doc:id="5a36c595-1d88-428d-b141-8462aa1aae09" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="reportsDynamicQuery" ><![CDATA[if(!isEmpty(attributes.queryParams.state))
+(
+	"SELECT COUNT(*) AS count, case_type, state
+	 FROM covid_case_master WHERE state = '" 
+	 ++ upper(attributes.queryParams.state) ++ 
+	 "' GROUP BY case_type, state"
+)else
+(
+		"SELECT COUNT(*) AS count, case_type, state FROM covid_case_master GROUP BY case_type, state"
+	
+)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="Flow Reference" doc:id="e89f857e-b757-41d0-81a8-5260b565607d" name="select-reports-uhub-dbSub_Flow"/>
+		<ee:transform doc:name="Prepare Response" doc:id="170c2379-6b8d-4e7d-b4e9-7a5f59f5cffa" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+fun vaccinatedByState(state) 
+    = (payload filter(($.state == state as String) 
+	and ($.case_type == "vaccinated")) map {
+	COUNT: $.count
+})[0]
+
+---
+((payload groupBy ($.state)  mapObject {
+ 	caseReports: {
+	state: $$,
+	reports: {
+		total : ($.count reduce $ + $$) - (vaccinatedByState($$).COUNT as Number default 0),
+		($ orderBy($.case_type) map {
+ 				($.case_type): $.count
+ 			})
+		
+	}
+	}
+}).*caseReports) default []]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="End Log" doc:id="78f3c4e5-bfbe-459b-b1f6-419368fb7f0e" message="transactionID: #[vars.transactionId], CoreelationID: #[vars.correlationId], message: End get covid reports flow"/>
+
+    </flow>
+	</mule>
