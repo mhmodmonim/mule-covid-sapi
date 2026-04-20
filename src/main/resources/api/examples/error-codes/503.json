@@ -1,0 +1,7 @@
+{
+    "code": 503,
+    "message": "Service Unavailable",
+    "description": "The service is currently unavailable, please try again later",
+    "datetime": "2024-06-01T12:00:00Z",
+    "transactionId": "45b2-6789-1234-5678-90ab-cdef12345678"
+}

@@ -1,0 +1,155 @@
+#%RAML 1.0 Library
+usage:  Types for uhub sapi
+types:
+    covid-case-request-type:
+        description: A case represents an individual case with various attributes.
+        type: object
+        properties:
+            source:
+                description: The source of the case data (e.g., hospital, testing center)
+                type: string
+                required: true
+                minLength: 1
+                maxLength: 60
+                example: "Hospital1"
+            caseType:
+                description: The type of the case (e.g., positive, negative, vaccinated)
+                type: string
+                required: true
+                minLength: 1
+                maxLength: 20
+                example: "positive"
+            firstName:
+                description: The first name of the case
+                type: string
+                required: true
+                minLength: 1
+                maxLength: 50
+                example: "John"
+            lastName:
+                description: The last name of the case
+                type: string
+                required: true
+                minLength: 1
+                maxLength: 50
+                example: "Nixon"
+            phone:
+                description: The phone number of the case
+                type: string
+                required: true
+                minLength: 10
+                maxLength: 15
+                example: "541-754-3010"
+
+            email:
+                description: The email address of the case
+                type: string
+                required: true
+                pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+                example: "john@gmail.com"
+            dateOfBirth:
+                description: The date of birth of the case
+                type: date-only
+                required: true
+                example: "1989-04-26"
+
+            nationalID:
+                description: The national ID of the case (e.g., SSN, passport number)
+                type: string
+                required: true
+                minLength: 1
+                maxLength: 20
+                example: "209-49-6193"
+            nationalIDType:
+                description: The type of the national ID (e.g., SSN, passport)
+                type: string
+                required: true
+                minLength: 1
+                maxLength: 20
+                example: "SSN"
+            address:
+                description: The address of the case
+                type: object
+                properties:
+                    streetAddress:
+                        description: The street address of the case
+                        type: string
+                        required: true
+                        minLength: 1
+                        maxLength: 100
+                        example: "1600 Pennsylvania Avenue NW"
+
+                    city:
+                        description: The city of the case
+                        type: string
+                        required: true
+                        minLength: 1
+                        maxLength: 50
+                        example: "Washington"
+
+                    state:
+                        description: The state of the case
+                        type: string
+                        required: true
+                        minLength: 1
+                        maxLength: 50
+                        example: "DC"
+                    postal:
+                        description: The postal code of the case
+                        type: string
+                        required: true
+                        minLength: 1
+                        maxLength: 20
+                        example: "20500"
+                    country:
+                        description: The country of the case
+                        type: string
+                        required: true
+                        minLength: 1
+                        maxLength: 50
+                        example: "USA"
+    covid-case-response-type:
+        description: A case response represents the response after creating a case.
+        type: object
+        properties:
+            registrationId:
+                description: The unique registration ID of the created case
+                type: string
+                required: true
+            message:
+                description: A message confirming the successful creation of the case
+                type: string
+                required: true
+
+
+
+    Address:
+        type: object
+        properties:
+            streetAddress: string
+            city: string
+            state: string
+            postal: string
+            country: string
+
+    Registration:
+        type: object
+        properties:
+            registrationId: string
+            source: string
+            caseType: string
+            firstName: string
+            lastName: string
+            phone?: string
+            email?: string
+            dateOfBirth?: date-only
+            nationalID?: string
+            nationalIDType?: string
+            address?: Address
+            createdAt: datetime
+            updatedAt: datetime
+
+    Registrations:
+        type: array
+        items: Registration
+ 

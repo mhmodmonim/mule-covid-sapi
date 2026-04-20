@@ -1,0 +1,27 @@
+#%RAML 1.0 Library
+usage: Common error types for uhub
+types:
+    error-response:
+        description: A standard error response format for API errors.
+        type: object
+        properties:
+            code:
+                description: A unique error code representing the type of error.
+                type: integer
+                required: true
+            message:
+                description: A human-readable message describing the error.
+                type: string
+                required: true
+            description:
+                description: A detailed description of the error, providing more context.
+                type: string
+                required: false
+            datetime:
+                description: The date and time when the error occurred in ISO 8601 format.
+                type: datetime
+                required: true
+            transactionId:
+                description: A unique identifier for the transaction that resulted in the error, useful for tracing and debugging.
+                type: string
+                required: false

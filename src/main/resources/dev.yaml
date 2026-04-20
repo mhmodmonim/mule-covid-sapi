@@ -1,12 +1,16 @@
+%YAML 1.2
+---
+
 http:
   port: "8081"
   
 database:
   uhub:
-    host: "localhost"
-    port: "3306"
-    user: "root"
-    password: "![eNvHMSNqFkI6XFLnlfI9ew==]"
+    name: "![gxAsmVI6bIudM0Mx9yKo8Q==]"
+    host: "serverless-europe-west3.sysp0000.db2.skysql.com"
+    port: "4071"
+    user: "![NTd9zpaYLoQdsG8jGWsdIQ==]"
+    password: "![+shCywT9+4g1jCRc4fGbamvfQm9erS9hIturLDQTM8Y=]"
   
   
   

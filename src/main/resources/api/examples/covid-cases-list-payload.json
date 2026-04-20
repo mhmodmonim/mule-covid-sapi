@@ -1,0 +1,46 @@
+[
+
+    {
+        "registrationId": "12345",
+        "source": "Hospital1",
+        "caseType": "positive",
+        "firstName": "John",
+        "lastName": "Nixon",
+        "phone": "541-754-3010",
+        "email": "john.nixon@example.com",
+        "dateOfBirth": "1989-04-26",
+        "nationalID": "209-49-6193",
+        "nationalIDType": "SSN",
+        "address": {
+            "streetAddress": "1600 Pennsylvania Avenue NW",
+            "city": "Washington",
+            "state": "DC",
+            "postal": "20500",
+            "country": "USA"
+        },
+        "createdAt": "2024-06-01T12:00:00Z",
+        "updatedAt": "2024-06-01T12:00:00Z"
+    },
+
+    {
+        "registrationId": "67890",
+        "source": "Hospital2",
+        "caseType": "negative",
+        "firstName": "John",
+        "lastName": "Nixon",
+        "phone": "541-754-3010",
+        "email": "john.nixon@example.com",
+        "dateOfBirth": "1989-04-26",
+        "nationalID": "209-49-6193",
+        "nationalIDType": "SSN",
+        "address": {
+            "streetAddress": "1600 Pennsylvania Avenue NW",
+            "city": "Washington",
+            "state": "DC",
+            "postal": "20500",
+            "country": "USA"
+        },
+        "createdAt": "2024-07-01T12:00:00Z",
+        "updatedAt": "2024-09-01T12:00:00Z"
+    }
+]

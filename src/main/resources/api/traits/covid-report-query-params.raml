@@ -1,0 +1,15 @@
+#%RAML 1.0 Trait
+usage: Apply this trait to endpoints that support query parameters for COVID report filtering
+queryParameters:
+    state:
+        description: Filter report by state
+        type: string
+        required: false
+    fromDate:
+        description: Start date for the report (inclusive)
+        type: date-only
+        required: false
+    toDate:
+        description: End date for the report (inclusive)
+        type: date-only
+        required: false

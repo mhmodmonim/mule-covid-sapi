@@ -1,0 +1,13 @@
+{
+
+    "state": "DC",
+    "reportDate": "2024-06-01",
+    "report": {
+        "totalCases": 1000,
+        "positiveCases": 800,
+        "negativeCases": 200,
+        "vaccinatedCases": 600,
+        "deadCases": 50,
+        "recoveredCases": 750
+    }
+}

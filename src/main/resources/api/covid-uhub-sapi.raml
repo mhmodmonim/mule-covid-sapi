@@ -1,0 +1,140 @@
+#%RAML 1.0
+title: covid-uhub-sapi
+version: v1
+baseUri: http://{environment}/covid/{version}/
+baseUriParameters:
+    environment:
+        description: DEV, TEST, UAT, PROD
+        enum: [covid-dev-uhub-sapi.us-e2.cloudhub.io, covid-test-uhub-sapi.us-e2.cloudhub.io, covid-uat-uhub-sapi.us-e2.cloudhub.io, covid-prod-uhub-sapi.us-e2.cloudhub.io]
+traits:
+    x-correlation-id: !include /exchange_modules/ae70f528-2250-49bd-bcca-c9f5cb212bf9/x-correlation-id/1.0.0/x-correlation-id-.raml
+    x-transaction-id: !include /exchange_modules/ae70f528-2250-49bd-bcca-c9f5cb212bf9/x-transaction-id/1.0.0/x-transaction-id.raml
+    client-id: !include /exchange_modules/ae70f528-2250-49bd-bcca-c9f5cb212bf9/client-id-header/1.0.0/client-id-header.raml
+    covid-report-query-params: !include traits/covid-report-query-params.raml
+uses:
+    uhub-sapi-types: uhub-types/uhub-types.raml
+    common-types: /exchange_modules/ae70f528-2250-49bd-bcca-c9f5cb212bf9/cmn-data-types/1.0.1/cmn-data-types.raml
+    resource-types: /exchange_modules/ae70f528-2250-49bd-bcca-c9f5cb212bf9/cmn-resource-types/1.0.0/cmn-resource-types.raml
+
+/cases:
+    post:
+        description: Create a new case
+        is: [client-id, x-correlation-id, x-transaction-id]
+           
+        body:
+            application/json:
+                type: uhub-sapi-types.covid-case-request-type
+                example: !include examples/covid-case-request-payload.json
+        responses:
+            201:
+                description: Case created successfully
+                body:
+                    application/json:
+                        type: uhub-sapi-types.covid-case-response-type
+                        example: !include examples/covid-created-case-response-payload.json
+            400:
+                description: Bad request, invalid input data
+                body:
+                    application/json:
+                        type: common-types.error-response
+                        example: !include examples/error-codes/400.json
+            500:
+                description: Internal server error
+                body:
+                    application/json:
+                        type: common-types.error-response
+                        example: !include examples/error-codes/500.json
+    put:
+        description: Update an existing case
+        is: [client-id, x-correlation-id, x-transaction-id] 
+        body:
+            application/json:
+                example: !include examples/covid-update-case-payload.json
+        responses:
+            200:
+                description: Case updated successfully
+                body:
+                    application/json:
+                        type: uhub-sapi-types.covid-case-response-type
+                        example: !include examples/covid-case-update-response-payload.json
+            400:
+                description: Bad request, invalid input data
+                body:
+                    application/json:
+                        type: common-types.error-response
+                        example: !include examples/error-codes/400.json
+                              
+            404:
+                description: Case not found
+                body:
+                    application/json:
+                        type: common-types.error-response
+                        example: !include examples/error-codes/404.json
+            503:
+                description: Service unavailable
+                body:
+                    application/json:
+                        type: common-types.error-response
+                        example: !include examples/error-codes/503.json
+                               
+            500:
+                description: Internal server error
+                body:
+                    application/json:
+                        type: common-types.error-response
+                        example: !include examples/error-codes/500.json
+    /{nationalID}:
+        get:
+            description: Retrieve case details by national ID
+            is: [client-id, x-correlation-id, x-transaction-id]
+            responses:
+                200:
+                    description: Case details retrieved successfully
+                    body:
+                        application/json:
+                            type: uhub-sapi-types.Registration[]
+                            example: !include examples/covid-cases-list-payload.json
+                404:
+                    description: Case not found
+                    body:
+                        application/json:
+                            type: common-types.error-response
+                            example: !include examples/error-codes/404.json
+                503:
+                    description: Service unavailable
+                    body:
+                        application/json:
+                            type: common-types.error-response
+                            example: !include examples/error-codes/503.json
+                500:
+                    description: Internal server error
+                    body:
+                        application/json:
+                            type: common-types.error-response
+                            example: !include examples/error-codes/500.json
+/reports:
+    get:
+        description: Retrieve aggregated case reports
+        is: [client-id, x-correlation-id, x-transaction-id, covid-report-query-params]
+        responses:
+            200:
+                description: Report retrieved successfully
+                body:
+                    application/json:
+                        example: !include examples/covid-report-payload.json
+            503:
+                description: Service unavailable
+                body:
+                    application/json:
+                        example: !include examples/error-codes/503.json
+            500:
+                description: Internal server error
+                body:
+                    application/json:
+                        type: common-types.error-response
+                        example: !include examples/error-codes/500.json
+/health-check:
+    get:
+    type: 
+        resource-types.all:
+            getResponseType: string
