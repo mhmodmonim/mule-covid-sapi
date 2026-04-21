@@ -17,27 +17,12 @@ pipeline {
     environment {
         ANYPOINT_CREDS  = credentials('anypoint-connected-app')
         MAVEN_OPTS      = '-Xmx1024m'
-<<<<<<< HEAD
+
         MAVEN_LOCAL_REPO = '/home/jenkins/.m2/repository'
     }
 
     stages {
-=======
-        MAVEN_LOCAL_REPO = "${WORKSPACE}/.m2/repository"
-    }
 
-    stages {
-        stage('Restore Maven Cache') {
-            steps {
-                cache(maxCacheSize: 500, defaultBranch: 'main', caches: [
-                    arbitraryFileCache(path: '.m2/repository', includes: '**/*', cacheValidityDecidingFile: 'pom.xml')
-                ]) {
-                    echo 'Maven cache restored'
-                }
-            }
-        }
-
->>>>>>> 3d76cb6ff7345d3e01891341329daa5638d6ae83
         stage('Build & Unit Test') {
             steps {
                 sh 'mvn clean package -DskipMunitTests -Dmaven.repo.local=${MAVEN_LOCAL_REPO}'
