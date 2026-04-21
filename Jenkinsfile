@@ -22,12 +22,13 @@ pipeline {
     environment {
         ANYPOINT_CREDS  = credentials('anypoint-connected-app')
         MAVEN_OPTS      = '-Xmx1024m'
-        MAVEN_LOCAL_REPO = "${WORKSPACE}/.m2/repository"
+        MAVEN_LOCAL_REPO = "${HOME}/.m2/repository"
     }
 
     stages {
         stage('Build & Unit Test') {
             steps {
+                sh 'mkdir -p ${MAVEN_LOCAL_REPO}'
                 sh 'mvn clean package -DskipMunitTests -Dmaven.repo.local=${MAVEN_LOCAL_REPO}'
             }
             post {
@@ -115,7 +116,7 @@ def deployToCloudHub(String targetEnv) {
 
     retry(2) {
         sh """
-            mvn deploy -Pdev -DmuleDeploy \
+            mvn deploy -DmuleDeploy \
                 -Dmaven.repo.local=\${MAVEN_LOCAL_REPO} \
                 -Dclient.id=\${ANYPOINT_CREDS_USR} \
                 -Dclient.secret=\${ANYPOINT_CREDS_PSW} \
