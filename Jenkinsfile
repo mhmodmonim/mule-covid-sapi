@@ -115,7 +115,7 @@ def deployToCloudHub(String targetEnv) {
 
     retry(2) {
         sh """
-            mvn deploy -DmuleDeploy \
+            mvn deploy -Pdev -DmuleDeploy \
                 -Dmaven.repo.local=\${MAVEN_LOCAL_REPO} \
                 -Dclient.id=\${ANYPOINT_CREDS_USR} \
                 -Dclient.secret=\${ANYPOINT_CREDS_PSW} \
