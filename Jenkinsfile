@@ -22,10 +22,12 @@ pipeline {
     environment {
         ANYPOINT_CREDS  = credentials('anypoint-connected-app')
         MAVEN_OPTS      = '-Xmx1024m'
+
         MAVEN_LOCAL_REPO = '/home/jenkins/.m2/repository'
     }
 
     stages {
+
         stage('Build & Unit Test') {
             steps {
                 sh 'mvn clean package -DskipMunitTests -Dmaven.repo.local=${MAVEN_LOCAL_REPO}'
