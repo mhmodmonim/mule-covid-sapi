@@ -8,6 +8,11 @@ pipeline {
         timestamps()
     }
 
+    tools {
+        maven 'Maven-3.9.0'
+        jdk 'JDK-17'
+    }
+
     parameters {
         choice(name: 'ENVIRONMENT', choices: ['dev', 'staging', 'prod'], description: 'Target deployment environment')
         string(name: 'APP_NAME', defaultValue: 'my-mule-app', description: 'CloudHub application name')
