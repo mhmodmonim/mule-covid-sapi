@@ -28,8 +28,10 @@ pipeline {
     stages {
         stage('Build & Unit Test') {
             steps {
-                sh 'mkdir -p ${MAVEN_LOCAL_REPO}'
-                sh 'mvn clean package -DskipMunitTests -Dmaven.repo.local=${MAVEN_LOCAL_REPO}'
+                configFileProvider([configFile(fileId: 'maven-settings', variable: 'MAVEN_SETTINGS')]) {
+                    sh 'mkdir -p ${MAVEN_LOCAL_REPO}'
+                    sh 'mvn clean package -s ${MAVEN_SETTINGS} -DskipMunitTests -Dmaven.repo.local=${MAVEN_LOCAL_REPO}'
+                }
             }
             post {
                 always {
@@ -40,7 +42,9 @@ pipeline {
 
         stage('MUnit Tests') {
             steps {
-                sh 'mvn test -Dmaven.repo.local=${MAVEN_LOCAL_REPO}'
+                configFileProvider([configFile(fileId: 'maven-settings', variable: 'MAVEN_SETTINGS')]) {
+                    sh 'mvn test -s ${MAVEN_SETTINGS} -Dmaven.repo.local=${MAVEN_LOCAL_REPO}'
+                }
             }
             post {
                 always {
@@ -114,16 +118,15 @@ def deployToCloudHub(String targetEnv) {
     def envSuffix = (targetEnv == 'prod') ? '' : "-${targetEnv}"
     def appName   = "${params.APP_NAME}${envSuffix}"
 
-    retry(2) {
-        sh """
-            mvn deploy -DmuleDeploy \
-                -Dmaven.repo.local=\${MAVEN_LOCAL_REPO} \
-                -Dclient.id=\${ANYPOINT_CREDS_USR} \
-                -Dclient.secret=\${ANYPOINT_CREDS_PSW} \
-                -Dapp.name=${appName} \
-                -Denv=${targetEnv} \
-                -DskipTests
-        """
+    configFileProvider([configFile(fileId: 'maven-settings', variable: 'MAVEN_SETTINGS')]) {
+        retry(2) {
+            sh """
+                mvn deploy -P${targetEnv} -DmuleDeploy \
+                    -s \${MAVEN_SETTINGS} \
+                    -Dmaven.repo.local=\${MAVEN_LOCAL_REPO} \
+                    -DskipTests
+            """
+        }
     }
     echo "Deployed ${appName} to ${targetEnv}"
 }

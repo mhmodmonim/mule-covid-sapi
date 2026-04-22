@@ -16,7 +16,7 @@ http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/m
         <http:listener-connection host="0.0.0.0" port="${http.port}" readTimeout="120000"/>
     </http:listener-config>
     <apikit:config name="covid-uhub-sapi-config" api="api/covid-uhub-sapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
-	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="e20d24b9-0115-4fb1-b407-0b8708aaac0d" file="dev.yaml" key="abcdefg123456789" />
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="e20d24b9-0115-4fb1-b407-0b8708aaac0d" file="${env}.yaml" key="${enc.key}" />
 	<db:config name="uhub_Database_Config" doc:name="Database Config" doc:id="372f7491-c564-4a1f-b036-192df9518d9c" >
 		<db:my-sql-connection host="${secure::database.uhub.host}" port="${secure::database.uhub.port}" user="${secure::database.uhub.user}" password="${secure::database.uhub.password}" database="${secure::database.uhub.name}"/>
 	</db:config>
