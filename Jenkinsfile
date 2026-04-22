@@ -35,7 +35,7 @@ pipeline {
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true, allowEmptyArchive: true
                 }
             }
         }
@@ -53,7 +53,8 @@ pipeline {
                         reportDir: 'target/site/munit/coverage',
                         reportFiles: 'summary.html',
                         reportName: 'MUnit Coverage Report',
-                        keepAll: true
+                        keepAll: true,
+                        allowMissing: true
                     ])
                 }
             }
@@ -104,7 +105,6 @@ pipeline {
         }
         failure {
             echo "Pipeline FAILED for ${params.APP_NAME} targeting ${params.ENVIRONMENT}"
-            // Replace with your notification of choice:
             // slackSend channel: '#deployments', color: 'danger', message: "FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
             // emailext subject: "FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}", to: 'team@example.com', body: "Check: ${env.BUILD_URL}"
         }
