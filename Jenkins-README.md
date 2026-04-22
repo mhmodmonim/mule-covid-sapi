@@ -74,6 +74,7 @@ Go to **Manage Jenkins → Plugins → Available plugins** and install:
 | **HTML Publisher**            | Publishes MUnit coverage HTML reports            |
 | **Workspace Cleanup**         | `cleanWs()` step support                         |
 | **Timestamper**               | `timestamps()` option in pipeline                |
+| **Config File Provider**      | Manages `settings.xml` centrally; injects it via `configFileProvider` step |
 
 After installing, restart Jenkins when prompted.
 
@@ -111,7 +112,78 @@ After installing, restart Jenkins when prompted.
 
 > **Important:** The credential ID **must** match `anypoint-connected-app` — this is the ID referenced in the Jenkinsfile.
 
-### 4.3 (Optional) GitHub Credentials
+### 4.3 Configure Managed Maven `settings.xml` (Config File Provider)
+
+The Jenkinsfile uses the **Config File Provider** plugin to inject a managed `settings.xml` into every Maven invocation. This avoids placing credentials on the agent's filesystem.
+
+1. Go to **Manage Jenkins → Managed files → Add a new Config**.
+2. Select **Maven settings.xml**, click **Submit**.
+3. Set:
+
+| Field  | Value              |
+| ------ | ------------------ |
+| ID     | `maven-settings`   |
+| Name   | MuleSoft Maven Settings |
+
+4. Paste the following content:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+    <servers>
+        <server>
+            <id>anypoint-exchange-v3</id>
+            <!-- credentials injected by Config File Provider -->
+        </server>
+        <server>
+            <id>mulesoft-releases</id>
+            <!-- credentials injected by Config File Provider -->
+        </server>
+    </servers>
+
+    <profiles>
+        <profile>
+            <id>mulesoft</id>
+            <repositories>
+                <repository>
+                    <id>mulesoft-releases</id>
+                    <name>MuleSoft Releases</name>
+                    <url>https://repository.mulesoft.org/releases/</url>
+                </repository>
+                <repository>
+                    <id>anypoint-exchange-v3</id>
+                    <name>Anypoint Exchange V3</name>
+                    <url>https://maven.anypoint.mulesoft.com/api/v3/maven</url>
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>mulesoft-releases</id>
+                    <name>MuleSoft Releases</name>
+                    <url>https://repository.mulesoft.org/releases/</url>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
+
+    <activeProfiles>
+        <activeProfile>mulesoft</activeProfile>
+    </activeProfiles>
+</settings>
+```
+
+5. Under **Server Credentials**, map each `<server>` ID to the Jenkins credential:
+
+| Server ID               | Credentials                |
+| ----------------------- | -------------------------- |
+| `anypoint-exchange-v3`  | `anypoint-connected-app`   |
+| `mulesoft-releases`     | `anypoint-connected-app`   |
+
+6. Click **Submit**.
+
+> **Important:** The file ID **must** be `maven-settings` — this is the ID referenced in the Jenkinsfile's `configFileProvider` steps. Credentials are encrypted in Jenkins and injected at build time; they never appear in the Jenkinsfile or console log.
+
+### 4.4 (Optional) GitHub Credentials
 
 If your repository is private:
 
@@ -167,56 +239,7 @@ mvn -version     # Must be 3.8+
 git --version
 ```
 
-### Configure Maven `settings.xml`
-
-On the build agent, create/update `~/.m2/settings.xml` so Maven can pull MuleSoft dependencies:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<settings>
-    <servers>
-        <server>
-            <id>anypoint-exchange-v3</id>
-            <username>~~~Client~~~</username>
-            <password>${client.id}~?~${client.secret}</password>
-        </server>
-        <server>
-            <id>mulesoft-releases</id>
-            <username>~~~Client~~~</username>
-            <password>${client.id}~?~${client.secret}</password>
-        </server>
-    </servers>
-
-    <profiles>
-        <profile>
-            <id>mulesoft</id>
-            <repositories>
-                <repository>
-                    <id>mulesoft-releases</id>
-                    <name>MuleSoft Releases</name>
-                    <url>https://repository.mulesoft.org/releases/</url>
-                </repository>
-                <repository>
-                    <id>anypoint-exchange-v3</id>
-                    <name>Anypoint Exchange V3</name>
-                    <url>https://maven.anypoint.mulesoft.com/api/v3/maven</url>
-                </repository>
-            </repositories>
-            <pluginRepositories>
-                <pluginRepository>
-                    <id>mulesoft-releases</id>
-                    <name>MuleSoft Releases</name>
-                    <url>https://repository.mulesoft.org/releases/</url>
-                </pluginRepository>
-            </pluginRepositories>
-        </profile>
-    </profiles>
-
-    <activeProfiles>
-        <activeProfile>mulesoft</activeProfile>
-    </activeProfiles>
-</settings>
-```
+> **Note:** Maven `settings.xml` is managed centrally via the **Config File Provider** plugin (see [Section 4.3](#43-configure-managed-maven-settingsxml-config-file-provider)). You do **not** need to place a `settings.xml` on the build agent manually.
 
 ---
 
@@ -238,7 +261,7 @@ Under the **Pipeline** section at the bottom:
 | SCM                    | **Git**                                                     |
 | Repository URL         | `https://github.com/YOUR_ORG/YOUR_REPO.git`                |
 | Credentials            | Select your `github-credentials` (if private repo)          |
-| Branch Specifier       | `*/main`                                                    |
+| Branch Specifier       | `*/main` (or your default branch)                           |
 | Script Path            | `Jenkinsfile`                                               |
 
 > **Note:** Rename `Jenkinsfile.txt` to `Jenkinsfile` (no extension) and place it in the **root** of your Git repository.
@@ -275,7 +298,9 @@ my-mule-app/
 
 ### Key `pom.xml` Configuration
 
-Your `pom.xml` should already include the CloudHub deployment plugin with `region`, `workers`, and `workerType`. Verify it looks similar to:
+The Jenkinsfile activates a **Maven profile** per environment (`-P dev`, `-P staging`, `-P prod`). Your `pom.xml` must define these profiles with the corresponding deployment configuration.
+
+#### Deployment Plugin (shared configuration)
 
 ```xml
 <plugin>
@@ -283,23 +308,97 @@ Your `pom.xml` should already include the CloudHub deployment plugin with `regio
     <artifactId>mule-maven-plugin</artifactId>
     <version>4.2.1</version>
     <extensions>true</extensions>
-    <configuration>
-        <cloudhub2Deployment>
-            <uri>https://anypoint.mulesoft.com</uri>
-            <provider>MC</provider>
-            <businessGroupId>${business.group.id}</businessGroupId>
-            <applicationName>${app.name}</applicationName>
-            <environment>${env}</environment>
-            <region>us-east-1</region>
-            <workers>1</workers>
-            <workerType>SMALL</workerType>
-            <connectedAppClientId>${client.id}</connectedAppClientId>
-            <connectedAppClientSecret>${client.secret}</connectedAppClientSecret>
-            <connectedAppGrantType>client_credentials</connectedAppGrantType>
-        </cloudhub2Deployment>
-    </configuration>
 </plugin>
 ```
+
+#### Environment Profiles
+
+Add a `<profiles>` section with one profile per environment. The Jenkinsfile invokes `mvn deploy -P<env>`, so the profile `<id>` must match:
+
+```xml
+<profiles>
+    <profile>
+        <id>dev</id>
+        <build>
+            <plugins>
+                <plugin>
+                    <groupId>org.mule.tools.maven</groupId>
+                    <artifactId>mule-maven-plugin</artifactId>
+                    <configuration>
+                        <cloudhub2Deployment>
+                            <uri>https://anypoint.mulesoft.com</uri>
+                            <provider>MC</provider>
+                            <businessGroupId>${business.group.id}</businessGroupId>
+                            <applicationName>${project.artifactId}-dev</applicationName>
+                            <environment>dev</environment>
+                            <region>us-east-1</region>
+                            <workers>1</workers>
+                            <workerType>MICRO</workerType>
+                            <connectedAppClientId>${connectedApp.clientId}</connectedAppClientId>
+                            <connectedAppClientSecret>${connectedApp.clientSecret}</connectedAppClientSecret>
+                            <connectedAppGrantType>client_credentials</connectedAppGrantType>
+                        </cloudhub2Deployment>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </build>
+    </profile>
+    <profile>
+        <id>staging</id>
+        <build>
+            <plugins>
+                <plugin>
+                    <groupId>org.mule.tools.maven</groupId>
+                    <artifactId>mule-maven-plugin</artifactId>
+                    <configuration>
+                        <cloudhub2Deployment>
+                            <uri>https://anypoint.mulesoft.com</uri>
+                            <provider>MC</provider>
+                            <businessGroupId>${business.group.id}</businessGroupId>
+                            <applicationName>${project.artifactId}-staging</applicationName>
+                            <environment>staging</environment>
+                            <region>us-east-1</region>
+                            <workers>1</workers>
+                            <workerType>SMALL</workerType>
+                            <connectedAppClientId>${connectedApp.clientId}</connectedAppClientId>
+                            <connectedAppClientSecret>${connectedApp.clientSecret}</connectedAppClientSecret>
+                            <connectedAppGrantType>client_credentials</connectedAppGrantType>
+                        </cloudhub2Deployment>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </build>
+    </profile>
+    <profile>
+        <id>prod</id>
+        <build>
+            <plugins>
+                <plugin>
+                    <groupId>org.mule.tools.maven</groupId>
+                    <artifactId>mule-maven-plugin</artifactId>
+                    <configuration>
+                        <cloudhub2Deployment>
+                            <uri>https://anypoint.mulesoft.com</uri>
+                            <provider>MC</provider>
+                            <businessGroupId>${business.group.id}</businessGroupId>
+                            <applicationName>${project.artifactId}</applicationName>
+                            <environment>prod</environment>
+                            <region>us-east-1</region>
+                            <workers>2</workers>
+                            <workerType>SMALL</workerType>
+                            <connectedAppClientId>${connectedApp.clientId}</connectedAppClientId>
+                            <connectedAppClientSecret>${connectedApp.clientSecret}</connectedAppClientSecret>
+                            <connectedAppGrantType>client_credentials</connectedAppGrantType>
+                        </cloudhub2Deployment>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </build>
+    </profile>
+</profiles>
+```
+
+> **Note:** The `connectedApp.clientId` and `connectedApp.clientSecret` properties are resolved from the managed `settings.xml` server credentials (see [Section 4.3](#43-configure-managed-maven-settingsxml-config-file-provider)).
 
 ---
 
@@ -309,11 +408,11 @@ Your `pom.xml` should already include the CloudHub deployment plugin with `regio
 
 ```
 ┌─────────────────────┐
-│  Build & Unit Test   │  mvn clean package -DskipMunitTests
+│  Build & Unit Test   │  mvn clean package -s $MAVEN_SETTINGS -DskipMunitTests
 └─────────┬───────────┘
           │
 ┌─────────▼───────────┐
-│    MUnit Tests       │  mvn test → JUnit report + Coverage HTML
+│    MUnit Tests       │  mvn test -s $MAVEN_SETTINGS → JUnit + Coverage HTML
 └─────────┬───────────┘
           │
 ┌─────────▼───────────┐
@@ -337,13 +436,14 @@ Your `pom.xml` should already include the CloudHub deployment plugin with `regio
 
 | Feature                   | Details                                                    |
 | ------------------------- | ---------------------------------------------------------- |
+| **Maven settings**        | Injected per-step via `configFileProvider` (`maven-settings`); auto-cleaned after each block |
 | **Credentials injection** | `ANYPOINT_CREDS_USR` / `ANYPOINT_CREDS_PSW` auto-created from `credentials()` |
-| **App naming convention** | Dev: `my-mule-app-dev`, Staging: `my-mule-app-staging`, Prod: `my-mule-app` |
+| **Maven profiles**        | Deploy uses `-P<env>` to activate the matching pom.xml profile (`dev`, `staging`, `prod`) |
 | **Retry on deploy**       | Each deploy retries up to 2 times on failure               |
 | **Concurrent builds**     | Disabled — only one build runs at a time                   |
 | **Timeout**               | 60 min total pipeline, 24 hours for prod approval          |
-| **Artifacts**             | JAR archived with fingerprint for traceability             |
-| **Test reports**          | JUnit XML + MUnit coverage HTML published to Jenkins       |
+| **Artifacts**             | JAR archived with fingerprint; `allowEmptyArchive: true` prevents build failure if no JAR |
+| **Test reports**          | JUnit XML + MUnit coverage HTML; `allowMissing: true` prevents build failure if report dir is absent |
 
 ---
 
@@ -395,13 +495,15 @@ input message: "Deploy to PRODUCTION?", ok: 'Approve', submitter: 'admin,john,ja
 | Problem | Cause | Fix |
 |---|---|---|
 | `mvn: command not found` | Maven not installed on agent | Install Maven on the agent and add to `PATH` |
-| `Could not resolve dependencies` | Missing MuleSoft repos | Verify `~/.m2/settings.xml` on the agent (see Section 5) |
-| `401 Unauthorized` on deploy | Wrong credentials | Verify `anypoint-connected-app` credential ID and values in Jenkins |
+| `Could not resolve dependencies` | Missing MuleSoft repos or wrong settings | Verify the managed `settings.xml` in **Manage Jenkins → Managed files** has the correct repository URLs and that its ID is `maven-settings` (see Section 4.3) |
+| `401 Unauthorized` on deploy | Wrong or missing server credentials | In **Managed files → maven-settings**, verify the **Server Credentials** mappings bind `anypoint-exchange-v3` and `mulesoft-releases` to `anypoint-connected-app` |
+| `No such configFile` error | Config File Provider not set up | Install the **Config File Provider** plugin and create a managed file with ID `maven-settings` (see Section 4.3) |
 | `No agent with label mule-builder` | No node has the label | Add `mule-builder` label to a node (see Section 5) |
 | Parameters not showing | First run needed | Run the pipeline once to register parameters |
 | `cleanWs` fails | Plugin missing | Install the **Workspace Cleanup** plugin |
-| `publishHTML` fails | Plugin missing | Install the **HTML Publisher** plugin |
+| `publishHTML` fails | Plugin or report missing | Install the **HTML Publisher** plugin; the Jenkinsfile uses `allowMissing: true` so a missing report dir will not fail the build |
 | MUnit coverage report empty | MUnit coverage not configured | Add `<coverage>` config in `pom.xml` under `munit-maven-plugin` |
+| Deploy succeeds but wrong env config | Maven profile mismatch | Ensure `pom.xml` has `<profile>` entries with `<id>dev</id>`, `<id>staging</id>`, `<id>prod</id>` matching the `-P<env>` flag |
 
 ### Enabling MUnit Coverage in `pom.xml`
 
@@ -442,10 +544,11 @@ input message: "Deploy to PRODUCTION?", ok: 'Approve', submitter: 'admin,john,ja
 ## Quick-Start Checklist
 
 - [ ] Jenkins installed and running
-- [ ] Required plugins installed (Section 3)
-- [ ] `anypoint-connected-app` credential created (Section 4)
+- [ ] Required plugins installed — including **Config File Provider** (Section 3)
+- [ ] `anypoint-connected-app` credential created (Section 4.2)
+- [ ] Managed `settings.xml` created with ID `maven-settings` and server credentials mapped (Section 4.3)
 - [ ] Build agent has Java, Maven, Git, and the `mule-builder` label (Section 5)
-- [ ] `~/.m2/settings.xml` configured on the agent (Section 5)
+- [ ] `pom.xml` has Maven profiles for `dev`, `staging`, `prod` with deployment config (Section 7)
 - [ ] `Jenkinsfile` placed in repo root (no `.txt` extension)
 - [ ] Pipeline job created pointing to your repo (Section 6)
 - [ ] First build triggered to register parameters
